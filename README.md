@@ -1,21 +1,44 @@
 # Urban Service Platform
 
-Small production-style urban operations analytics system built with Python,
-PostgreSQL, and Spring Boot.
+A small production-style urban operations analytics system for city 311 service
+request data.
 
-Current data flow:
+The project demonstrates an end-to-end data application:
 
 ```text
-Raw 311 CSV -> Python cleaning script -> Clean CSV -> PostgreSQL -> Spring Boot REST API
+Raw 311 CSV -> Python cleaning -> Clean CSV -> PostgreSQL -> Spring Boot API -> React dashboard
 ```
+
+## Project Goals
+
+- Ingest raw city 311 service request data.
+- Clean and validate messy CSV data.
+- Store cleaned records in PostgreSQL.
+- Expose backend REST APIs with Spring Boot.
+- Display operational dashboards with React.
+- Prepare the project for Docker-based local development.
+- Build toward future risk scoring, simulation, and hotspot prediction.
+
+## Tech Stack
+
+- Python and pandas for data ingestion and cleaning.
+- PostgreSQL for relational data storage.
+- Spring Boot and Java for backend REST APIs.
+- React, TypeScript, and Vite for the frontend dashboard.
+- Docker Compose for reproducible database setup.
 
 ## Completed So Far
 
-- Ingest and clean San Francisco 311 service request data.
-- Generate a small data profiling report.
-- Create a PostgreSQL schema for cleaned service requests.
-- Import cleaned CSV data into PostgreSQL.
-- Expose Spring Boot health and analytics REST APIs.
+- Python cleaning script for San Francisco 311 data.
+- Data profiling report for time range, service types, neighborhoods, monthly
+  volume, average resolution time, and missing or invalid fields.
+- PostgreSQL schema and indexes for cleaned service request records.
+- CSV import scripts for local PostgreSQL and Docker PostgreSQL.
+- Spring Boot health and analytics APIs.
+- React dashboard connected to backend APIs.
+- Reusable frontend components for bar-list analytics panels.
+- Lightweight SVG map preview for latitude and longitude points.
+- Docker Compose configuration for PostgreSQL.
 
 ## Project Structure
 
@@ -28,10 +51,23 @@ data-pipeline/
 database/
   schema.sql
   import_clean_311.sql
+  import_clean_311_docker.sql
 
 backend/
   pom.xml
   src/main/java/com/example/urbanservice/
+
+frontend/
+  package.json
+  vite.config.ts
+  src/
+    api/
+    components/
+    App.tsx
+    App.css
+
+docker-compose.yml
+.env.example
 ```
 
 ## Data Pipeline
@@ -42,7 +78,7 @@ Run the Python cleaning script from the project root:
 python3 data-pipeline/ingest.py
 ```
 
-This reads:
+The script reads:
 
 ```text
 data-pipeline/311.csv
@@ -63,7 +99,7 @@ The script also prints a profiling report with:
 - Average resolution hours
 - Missing or invalid field summary
 
-## PostgreSQL Setup
+## Local PostgreSQL Setup
 
 Create the local project database:
 
@@ -95,6 +131,35 @@ Expected result:
 4881
 ```
 
+## Docker PostgreSQL Setup
+
+Copy the environment template if you want to customize database settings:
+
+```bash
+cp .env.example .env
+```
+
+Start PostgreSQL with Docker Compose:
+
+```bash
+docker compose up -d
+```
+
+The Docker database uses port `5433` on the host machine to avoid conflicting
+with a local PostgreSQL server on port `5432`.
+
+Verify the imported data:
+
+```bash
+PGPASSWORD=urban_password psql -h localhost -p 5433 -U urban_user -d urban_service -c "SELECT COUNT(*) FROM service_requests;"
+```
+
+Stop the Docker database:
+
+```bash
+docker compose down
+```
+
 ## Backend
 
 Start the Spring Boot backend:
@@ -104,23 +169,60 @@ cd backend
 ./mvnw spring-boot:run
 ```
 
-Run tests:
+Run backend tests:
 
 ```bash
 cd backend
 ./mvnw test
 ```
 
-The backend connects to:
+By default, the backend connects to:
 
 ```text
 jdbc:postgresql://localhost:5432/urban_service
 ```
 
-The local database username is configured in:
+The database connection is configured in:
 
 ```text
 backend/src/main/resources/application.properties
+```
+
+## Frontend
+
+Install frontend dependencies:
+
+```bash
+cd frontend
+npm install
+```
+
+Start the React development server:
+
+```bash
+cd frontend
+npm run dev
+```
+
+Open the frontend in the browser:
+
+```text
+http://localhost:5173
+```
+
+The frontend uses the Vite proxy in `frontend/vite.config.ts` to send `/api`
+requests to the Spring Boot backend at:
+
+```text
+http://localhost:8080
+```
+
+Run frontend checks:
+
+```bash
+cd frontend
+npm run lint
+npm run build
 ```
 
 ## API Endpoints
@@ -131,27 +233,10 @@ Health check:
 GET /api/health
 ```
 
-Example response:
-
-```json
-{
-  "status": "ok"
-}
-```
-
 Database health check:
 
 ```http
 GET /api/health/db
-```
-
-Example response:
-
-```json
-{
-  "status": "ok",
-  "serviceRequestCount": 4881
-}
 ```
 
 Top service types:
@@ -221,10 +306,26 @@ If the backend cannot connect to PostgreSQL, check:
 - Table `service_requests` exists.
 - `backend/src/main/resources/application.properties` has the correct username.
 
+If the frontend loads but data is unavailable, check:
+
+- The Spring Boot backend is running on port `8080`.
+- The React app is running on port `5173`.
+- `frontend/vite.config.ts` contains the `/api` proxy.
+- Browser DevTools Network tab shows whether API requests are failing.
+
+If Docker is not recognized:
+
+```text
+zsh: command not found: docker
+```
+
+Install and start Docker Desktop, then open a new terminal.
+
 ## Next Milestones
 
-- Build a React dashboard.
-- Add charts for service type ranking, neighborhood heat, monthly trend, and average resolution time.
-- Add map visualization using the map points API.
-- Add simple operational risk scoring.
+- Dockerize the Spring Boot backend.
+- Connect the backend to Docker PostgreSQL through environment variables.
+- Add stronger logging and error handling.
+- Add operational risk scoring.
 - Add simulation or prediction for request growth and hotspot areas.
+- Deploy the backend and frontend to the cloud.
