@@ -1,9 +1,20 @@
-import type { MapPointResponse } from '../api/analyticsApi'
+// This component provides a simple preview of map points 
+// based on latitude and longitude data.
 
 type LoadState = 'loading' | 'ready' | 'error'
 
+type MapPoint = {
+  serviceRequestId: string
+  serviceName: string
+  status: string
+  analysisNeighborhood: string
+  requestedDatetime: string
+  lat: number
+  lng: number
+}
+
 type MapPreviewProps = {
-  points: MapPointResponse[]
+  points: MapPoint[]
   loadState: LoadState
 }
 
@@ -17,6 +28,8 @@ function MapPreview({ points, loadState }: MapPreviewProps) {
   const latRange = maxLat - minLat || 1
   const lngRange = maxLng - minLng || 1
 
+  // The component renders a simple SVG plot of the points,
+  // along with a summary of the number of points and their lat/lng ranges.
   return (
     <section className="panel">
       <div className="panel-header">

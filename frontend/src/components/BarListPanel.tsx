@@ -1,5 +1,12 @@
+// This component is a reusable panel for 
+// displaying a list of items as horizontal bars.
+
+
+// Define the possible states for loading data in the component.
 type LoadState = 'loading' | 'ready' | 'error'
 
+// The BarListPanel component is designed to be flexible 
+// and can be used to display any type of data
 type BarListPanelProps<T> = {
   title: string
   description: string

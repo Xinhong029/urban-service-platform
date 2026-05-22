@@ -1,3 +1,6 @@
+// This module defines the API functions for fetching analytics data from the backend.
+// It includes type definitions for the expected responses and a helper function for making API requests.
+
 export type HealthResponse = {
   status: string
 }
