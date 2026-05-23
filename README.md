@@ -25,7 +25,7 @@ Raw 311 CSV -> Python cleaning -> Clean CSV -> PostgreSQL -> Spring Boot API -> 
 - PostgreSQL for relational data storage.
 - Spring Boot and Java for backend REST APIs.
 - React, TypeScript, and Vite for the frontend dashboard.
-- Docker Compose for reproducible database setup.
+- Docker Compose for reproducible full-stack local setup.
 
 ## Completed So Far
 
@@ -38,7 +38,10 @@ Raw 311 CSV -> Python cleaning -> Clean CSV -> PostgreSQL -> Spring Boot API -> 
 - React dashboard connected to backend APIs.
 - Reusable frontend components for bar-list analytics panels.
 - Lightweight SVG map preview for latitude and longitude points.
-- Docker Compose configuration for PostgreSQL.
+- Simple neighborhood operational risk score API and dashboard panel.
+- Targeted neighborhood risk simulation API and dashboard panel.
+- Baseline monthly request forecast API and dashboard panel.
+- Docker Compose configuration for PostgreSQL, Spring Boot, and React.
 
 ## Project Structure
 
@@ -131,7 +134,7 @@ Expected result:
 4881
 ```
 
-## Docker PostgreSQL Setup
+## Docker Setup
 
 Copy the environment template if you want to customize database settings:
 
@@ -139,7 +142,7 @@ Copy the environment template if you want to customize database settings:
 cp .env.example .env
 ```
 
-Start PostgreSQL with Docker Compose:
+Start PostgreSQL, the Spring Boot backend, and the React frontend with Docker Compose:
 
 ```bash
 docker compose up -d
@@ -148,13 +151,38 @@ docker compose up -d
 The Docker database uses port `5433` on the host machine to avoid conflicting
 with a local PostgreSQL server on port `5432`.
 
+The Docker backend uses port `8080`:
+
+```text
+http://localhost:8080
+```
+
+The Docker frontend uses port `5173`:
+
+```text
+http://localhost:5173
+```
+
 Verify the imported data:
 
 ```bash
 PGPASSWORD=urban_password psql -h localhost -p 5433 -U urban_user -d urban_service -c "SELECT COUNT(*) FROM service_requests;"
 ```
 
-Stop the Docker database:
+Verify the backend:
+
+```bash
+curl http://localhost:8080/api/health
+curl http://localhost:8080/api/health/db
+```
+
+Open the frontend:
+
+```text
+http://localhost:5173
+```
+
+Stop the Docker services:
 
 ```bash
 docker compose down
@@ -257,6 +285,13 @@ Monthly request counts:
 GET /api/analytics/monthly-request-counts
 ```
 
+Monthly request forecast:
+
+```http
+GET /api/analytics/monthly-forecast
+GET /api/analytics/monthly-forecast?periods=6
+```
+
 Average resolution time:
 
 ```http
@@ -272,6 +307,20 @@ GET /api/analytics/map-points?limit=100
 
 The map points endpoint defaults to 500 records and caps the limit at 1000.
 
+Neighborhood risk scores:
+
+```http
+GET /api/analytics/neighborhood-risk
+```
+
+Neighborhood risk simulation:
+
+```http
+GET /api/analytics/neighborhood-risk/simulation
+GET /api/analytics/neighborhood-risk/simulation?growthPercent=20
+GET /api/analytics/neighborhood-risk/simulation?neighborhood=Bayview%20Hunters%20Point&growthPercent=50
+```
+
 ## Example API Tests
 
 ```bash
@@ -280,8 +329,12 @@ curl http://localhost:8080/api/health/db
 curl http://localhost:8080/api/analytics/top-service-types
 curl http://localhost:8080/api/analytics/top-neighborhoods
 curl http://localhost:8080/api/analytics/monthly-request-counts
+curl "http://localhost:8080/api/analytics/monthly-forecast?periods=6"
 curl http://localhost:8080/api/analytics/average-resolution-time
 curl "http://localhost:8080/api/analytics/map-points?limit=5"
+curl http://localhost:8080/api/analytics/neighborhood-risk
+curl "http://localhost:8080/api/analytics/neighborhood-risk/simulation?growthPercent=20"
+curl "http://localhost:8080/api/analytics/neighborhood-risk/simulation?neighborhood=Bayview%20Hunters%20Point&growthPercent=50"
 ```
 
 ## Debugging Notes
@@ -306,12 +359,18 @@ If the backend cannot connect to PostgreSQL, check:
 - Table `service_requests` exists.
 - `backend/src/main/resources/application.properties` has the correct username.
 
-If the frontend loads but data is unavailable, check:
+If the frontend loads but data is unavailable in local development, check:
 
 - The Spring Boot backend is running on port `8080`.
 - The React app is running on port `5173`.
 - `frontend/vite.config.ts` contains the `/api` proxy.
 - Browser DevTools Network tab shows whether API requests are failing.
+
+If the Docker frontend loads but data is unavailable, check:
+
+- `docker compose ps` shows the backend as healthy.
+- `frontend/nginx.conf` proxies `/api/` to `http://backend:8080/api/`.
+- `docker compose logs frontend` and `docker compose logs backend` for errors.
 
 If Docker is not recognized:
 
@@ -323,9 +382,4 @@ Install and start Docker Desktop, then open a new terminal.
 
 ## Next Milestones
 
-- Dockerize the Spring Boot backend.
-- Connect the backend to Docker PostgreSQL through environment variables.
-- Add stronger logging and error handling.
-- Add operational risk scoring.
-- Add simulation or prediction for request growth and hotspot areas.
 - Deploy the backend and frontend to the cloud.

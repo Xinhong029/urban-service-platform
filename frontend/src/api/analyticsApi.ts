@@ -25,6 +25,16 @@ export type MonthlyRequestCountResponse = {
   requestCount: number
 }
 
+export type MonthlyForecastResponse = {
+  latestYear: number
+  latestMonth: number
+  latestRequestCount: number
+  averageMonthlyChange: number
+  forecastRequestCount: number
+  periodsUsed: number
+  method: string
+}
+
 export type MapPointResponse = {
   serviceRequestId: string
   serviceName: string
@@ -33,6 +43,22 @@ export type MapPointResponse = {
   requestedDatetime: string
   lat: number
   lng: number
+}
+
+export type NeighborhoodRiskResponse = {
+  neighborhood: string
+  requestCount: number
+  averageResolutionHours: number
+  riskScore: number
+}
+
+export type NeighborhoodRiskSimulationResponse = {
+  neighborhood: string
+  currentRequestCount: number
+  simulatedRequestCount: number
+  averageResolutionHours: number
+  currentRiskScore: number
+  simulatedRiskScore: number
 }
 
 async function fetchJson<T>(url: string, errorMessage: string): Promise<T> {
@@ -77,9 +103,35 @@ export function fetchMonthlyRequestCounts() {
   )
 }
 
+export function fetchMonthlyForecast(periods = 6) {
+  return fetchJson<MonthlyForecastResponse>(
+    `/api/analytics/monthly-forecast?periods=${periods}`,
+    'Monthly forecast request failed',
+  )
+}
+
 export function fetchMapPoints(limit = 500) {
   return fetchJson<MapPointResponse[]>(
     `/api/analytics/map-points?limit=${limit}`,
     'Map points request failed',
+  )
+}
+
+export function fetchNeighborhoodRisk() {
+  return fetchJson<NeighborhoodRiskResponse[]>(
+    '/api/analytics/neighborhood-risk',
+    'Neighborhood risk request failed',
+  )
+}
+
+export function fetchNeighborhoodRiskSimulation(neighborhood: string, growthPercent: number) {
+  const params = new URLSearchParams({
+    neighborhood,
+    growthPercent: String(growthPercent),
+  })
+
+  return fetchJson<NeighborhoodRiskSimulationResponse[]>(
+    `/api/analytics/neighborhood-risk/simulation?${params.toString()}`,
+    'Neighborhood risk simulation request failed',
   )
 }

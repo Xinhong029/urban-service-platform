@@ -4,8 +4,11 @@ import java.util.List;
 
 import com.example.urbanservice.analytics.dto.AverageResolutionTimeResponse;
 import com.example.urbanservice.analytics.dto.MapPointResponse;
+import com.example.urbanservice.analytics.dto.MonthlyForecastResponse;
 import com.example.urbanservice.analytics.dto.MonthlyRequestCountResponse;
 import com.example.urbanservice.analytics.dto.NeighborhoodCountResponse;
+import com.example.urbanservice.analytics.dto.NeighborhoodRiskResponse;
+import com.example.urbanservice.analytics.dto.NeighborhoodRiskSimulationResponse;
 import com.example.urbanservice.analytics.dto.ServiceTypeCountResponse;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -61,6 +64,19 @@ public class AnalyticsController {
     }
 
     /**
+     * Returns a simple forecast for the next monthly request count.
+     *
+     * @param periods number of recent monthly periods to use
+     * @return monthly request forecast based on recent average change
+     */
+    @GetMapping("/monthly-forecast")
+    public MonthlyForecastResponse getMonthlyForecast(
+        @RequestParam(defaultValue = "6") int periods
+    ) {
+        return analyticsService.getMonthlyForecast(periods);
+    }
+
+    /**
      * Returns the average number of hours needed to resolve 311 requests.
      *
      * @return average resolution time KPI
@@ -81,5 +97,30 @@ public class AnalyticsController {
         @RequestParam(defaultValue = "500") int limit
     ) {
         return analyticsService.getMapPoints(limit);
+    }
+
+    /**
+     * Returns neighborhoods ranked by a simple operational risk score.
+     *
+     * @return neighborhood risk scores ordered from highest to lowest
+     */
+    @GetMapping("/neighborhood-risk")
+    public List<NeighborhoodRiskResponse> getNeighborhoodRisk() {
+        return analyticsService.getNeighborhoodRisk();
+    }
+
+    /**
+     * Simulates neighborhood risk scores after one target neighborhood changes by a percentage.
+     *
+     * @param neighborhood neighborhood whose request volume should change
+     * @param growthPercent percentage growth applied to the target neighborhood
+     * @return simulated neighborhood risk scores ordered from highest to lowest
+     */
+    @GetMapping("/neighborhood-risk/simulation")
+    public List<NeighborhoodRiskSimulationResponse> simulateNeighborhoodRisk(
+        @RequestParam(defaultValue = "Mission") String neighborhood,
+        @RequestParam(defaultValue = "20") double growthPercent
+    ) {
+        return analyticsService.simulateNeighborhoodRisk(neighborhood, growthPercent);
     }
 }

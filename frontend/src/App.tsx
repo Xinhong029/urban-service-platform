@@ -4,6 +4,7 @@ import {
   fetchBackendHealth,
   fetchMapPoints,
   fetchMonthlyRequestCounts,
+  fetchNeighborhoodRisk,
   fetchTopNeighborhoods,
   fetchTopServiceTypes,
   type AverageResolutionTimeResponse,
@@ -11,10 +12,14 @@ import {
   type MapPointResponse,
   type MonthlyRequestCountResponse,
   type NeighborhoodCountResponse,
+  type NeighborhoodRiskResponse,
   type ServiceTypeCountResponse,
 } from './api/analyticsApi'
 import BarListPanel from './components/BarListPanel'
+import ForecastPanel from './components/ForecastPanel'
 import MapPreview from './components/MapPreview'
+import RiskScorePanel from './components/RiskScorePanel'
+import SimulationPanel from './components/SimulationPanel'
 import './App.css'
 
 // Define a type for the loading state of API calls
@@ -36,6 +41,8 @@ function App() {
   const [monthlyLoadState, setMonthlyLoadState] = useState<LoadState>('loading')
   const [mapPoints, setMapPoints] = useState<MapPointResponse[]>([])
   const [mapLoadState, setMapLoadState] = useState<LoadState>('loading')
+  const [neighborhoodRisks, setNeighborhoodRisks] = useState<NeighborhoodRiskResponse[]>([])
+  const [riskLoadState, setRiskLoadState] = useState<LoadState>('loading')
 
   useEffect(() => {
     async function loadBackendHealth() {
@@ -104,12 +111,24 @@ function App() {
       }
     }
 
+    async function loadNeighborhoodRisk() {
+      try {
+        const data = await fetchNeighborhoodRisk()
+        setNeighborhoodRisks(data)
+        setRiskLoadState('ready')
+      } catch (error) {
+        console.error(error)
+        setRiskLoadState('error')
+      }
+    }
+
     loadBackendHealth() // Call the health check function when the component mounts
     loadAverageResolutionTime()
     loadTopServiceTypes()
     loadTopNeighborhoods()
     loadMonthlyRequestCounts()
     loadMapPoints()
+    loadNeighborhoodRisk()
   }, []) 
 
   const statusText =
@@ -187,6 +206,8 @@ function App() {
         barClassName="bar-fill--monthly"
       />
 
+      <ForecastPanel />
+
       <BarListPanel
         title="Top Neighborhoods"
         description="Neighborhoods with the highest 311 request volume."
@@ -200,6 +221,10 @@ function App() {
         barClassName="bar-fill--neighborhood"
       />
 
+      <RiskScorePanel risks={neighborhoodRisks} loadState={riskLoadState} />
+
+      <SimulationPanel />
+
       <MapPreview points={mapPoints} loadState={mapLoadState} />
 
       <section className="panel">
@@ -212,8 +237,11 @@ function App() {
           <code>GET /api/analytics/top-service-types</code>
           <code>GET /api/analytics/top-neighborhoods</code>
           <code>GET /api/analytics/monthly-request-counts</code>
+          <code>GET /api/analytics/monthly-forecast</code>
           <code>GET /api/analytics/average-resolution-time</code>
           <code>GET /api/analytics/map-points?limit=500</code>
+          <code>GET /api/analytics/neighborhood-risk</code>
+          <code>GET /api/analytics/neighborhood-risk/simulation</code>
         </div>
       </section>
     </main>
