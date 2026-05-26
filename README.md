@@ -42,6 +42,10 @@ Raw 311 CSV -> Python cleaning -> Clean CSV -> PostgreSQL -> Spring Boot API -> 
 - Targeted neighborhood risk simulation API and dashboard panel.
 - Baseline monthly request forecast API and dashboard panel.
 - Docker Compose configuration for PostgreSQL, Spring Boot, and React.
+- Monthly data update script for downloading, cleaning, and re-importing fresh
+  311 data.
+- Cloud deployment preparation for backend CORS and frontend API base URL
+  configuration.
 
 ## Project Structure
 
@@ -71,6 +75,9 @@ frontend/
 
 docker-compose.yml
 .env.example
+scripts/
+  update_data.sh
+  run_monthly_update.sh
 ```
 
 ## Data Pipeline
@@ -101,6 +108,91 @@ The script also prints a profiling report with:
 - Monthly request counts
 - Average resolution hours
 - Missing or invalid field summary
+
+## Automatic Data Update
+
+Run the update script from the project root:
+
+```bash
+./scripts/update_data.sh
+```
+
+The script performs the local data refresh workflow:
+
+```text
+Download latest raw CSV -> run Python cleaning -> ensure PostgreSQL schema -> truncate old rows -> import clean CSV -> verify row count
+```
+
+The default raw data source is the San Francisco 311 open data CSV endpoint:
+
+```text
+https://data.sfgov.org/resource/vw6y-z8j6.csv?$limit=5000
+```
+
+To use a different source URL, pass `RAW_DATA_URL`:
+
+```bash
+RAW_DATA_URL="https://example.com/311.csv" ./scripts/update_data.sh
+```
+
+By default, it connects to local PostgreSQL:
+
+```text
+Database: urban_service
+Host: localhost
+Port: 5432
+User: current macOS username
+```
+
+To refresh the Docker PostgreSQL database instead, pass database environment variables:
+
+```bash
+DB_HOST=localhost DB_PORT=5433 DB_USER=urban_user DB_NAME=urban_service PGPASSWORD=urban_password ./scripts/update_data.sh
+```
+
+## Monthly Scheduled Data Refresh
+
+The project includes a cron-friendly wrapper script:
+
+```bash
+./scripts/run_monthly_update.sh
+```
+
+It runs `scripts/update_data.sh` and writes output to:
+
+```text
+logs/data_update.log
+```
+
+To schedule the update for the first day of every month at 2:00 AM, open your crontab:
+
+```bash
+crontab -e
+```
+
+Add this line:
+
+```cron
+0 2 1 * * /Users/zhengxinhong/project/urban-service-platform/scripts/run_monthly_update.sh
+```
+
+Cron format:
+
+```text
+minute hour day-of-month month day-of-week command
+```
+
+So `0 2 1 * *` means:
+
+```text
+Run at 2:00 AM on the 1st day of every month.
+```
+
+View update logs:
+
+```bash
+tail -f logs/data_update.log
+```
 
 ## Local PostgreSQL Setup
 
@@ -145,7 +237,7 @@ cp .env.example .env
 Start PostgreSQL, the Spring Boot backend, and the React frontend with Docker Compose:
 
 ```bash
-docker compose up -d
+docker compose up -d --build
 ```
 
 The Docker database uses port `5433` on the host machine to avoid conflicting
@@ -187,6 +279,68 @@ Stop the Docker services:
 ```bash
 docker compose down
 ```
+
+## Cloud Deployment Preparation
+
+This project is prepared for a split cloud deployment:
+
+```text
+Render PostgreSQL -> Render Spring Boot Web Service -> Render Static Site frontend
+```
+
+The backend reads database settings from environment variables, so local and
+cloud environments can use the same code:
+
+```text
+SPRING_DATASOURCE_URL
+SPRING_DATASOURCE_USERNAME
+SPRING_DATASOURCE_PASSWORD
+FRONTEND_ALLOWED_ORIGINS
+PORT
+```
+
+For the deployed backend, `SPRING_DATASOURCE_URL` should point to the cloud
+PostgreSQL database. On Render, prefer the internal database connection details
+when the backend and database are in the same Render region.
+
+Example backend environment variables:
+
+```text
+SPRING_DATASOURCE_URL=jdbc:postgresql://<host>:5432/<database>
+SPRING_DATASOURCE_USERNAME=<database-user>
+SPRING_DATASOURCE_PASSWORD=<database-password>
+FRONTEND_ALLOWED_ORIGINS=https://<your-frontend>.onrender.com
+PORT=10000
+```
+
+`PORT` tells the cloud platform which port the Spring Boot server should listen
+on. Locally, the backend still defaults to `8080`.
+
+The frontend reads its backend URL from a Vite build-time environment variable:
+
+```text
+VITE_API_BASE_URL
+```
+
+For local development, leave `VITE_API_BASE_URL` empty. The frontend will call
+relative `/api` URLs, and Vite or Nginx will proxy those requests to the backend.
+
+For cloud deployment, set it to the deployed backend URL:
+
+```text
+VITE_API_BASE_URL=https://<your-backend>.onrender.com
+```
+
+For a Render Static Site, use:
+
+```text
+Root Directory: frontend
+Build Command: npm install && npm run build
+Publish Directory: dist
+```
+
+After changing frontend environment variables on a static site, rebuild and
+redeploy the frontend because Vite injects those values during the build.
 
 ## Backend
 

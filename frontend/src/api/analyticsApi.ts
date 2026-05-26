@@ -61,8 +61,14 @@ export type NeighborhoodRiskSimulationResponse = {
   simulatedRiskScore: number
 }
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') ?? ''
+
+function buildApiUrl(path: string) {
+  return `${API_BASE_URL}${path}`
+}
+
 async function fetchJson<T>(url: string, errorMessage: string): Promise<T> {
-  const response = await fetch(url)
+  const response = await fetch(buildApiUrl(url))
 
   if (!response.ok) {
     throw new Error(`${errorMessage} with status ${response.status}`)
@@ -104,15 +110,23 @@ export function fetchMonthlyRequestCounts() {
 }
 
 export function fetchMonthlyForecast(periods = 6) {
+  const params = new URLSearchParams({
+    periods: String(periods),
+  })
+
   return fetchJson<MonthlyForecastResponse>(
-    `/api/analytics/monthly-forecast?periods=${periods}`,
+    `/api/analytics/monthly-forecast?${params.toString()}`,
     'Monthly forecast request failed',
   )
 }
 
 export function fetchMapPoints(limit = 500) {
+  const params = new URLSearchParams({
+    limit: String(limit),
+  })
+
   return fetchJson<MapPointResponse[]>(
-    `/api/analytics/map-points?limit=${limit}`,
+    `/api/analytics/map-points?${params.toString()}`,
     'Map points request failed',
   )
 }
