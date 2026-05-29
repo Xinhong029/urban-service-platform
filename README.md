@@ -342,6 +342,49 @@ Publish Directory: dist
 After changing frontend environment variables on a static site, rebuild and
 redeploy the frontend because Vite injects those values during the build.
 
+## Manual Cloud Data Refresh
+
+The deployed cloud database can be refreshed manually with the same update
+script used for local development:
+
+```bash
+./scripts/update_data.sh
+```
+
+When refreshing the Render PostgreSQL database, pass the cloud database
+connection settings as environment variables:
+
+```text
+DB_NAME=<render-database-name>
+DB_HOST=<render-database-external-host>
+DB_PORT=5432
+DB_USER=<render-database-user>
+PGPASSWORD=<render-database-password>
+RAW_DATA_URL=https://data.sfgov.org/resource/vw6y-z8j6.csv?$limit=5000
+```
+
+Example:
+
+```bash
+DB_NAME=urban_service \
+DB_HOST=<render-database-external-host> \
+DB_PORT=5432 \
+DB_USER=<render-database-user> \
+PGPASSWORD=<render-database-password> \
+./scripts/update_data.sh
+```
+
+This command downloads the latest raw 311 CSV, runs the Python cleaning script,
+recreates the schema if needed, truncates old rows, imports the clean CSV, and
+prints the final row count.
+
+The project intentionally uses manual cloud refresh for now to avoid recurring
+cron job costs. A successful update ends with:
+
+```text
+Data update complete
+```
+
 ## Backend
 
 Start the Spring Boot backend:
